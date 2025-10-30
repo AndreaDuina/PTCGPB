@@ -7,6 +7,7 @@ Screenshots/Trades/**
 !Screenshots/Trades/.gitignore
 Scripts/*.ahk
 Scripts/*.ini
+!Scripts/dev.ahk
 !Scripts/1.ahk
 !Scripts/Main.ahk
 *.txt
