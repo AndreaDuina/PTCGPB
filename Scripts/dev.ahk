@@ -1,3 +1,5 @@
+DEV_MODE := true ; FIXME: remove in release
+
 #Include %A_ScriptDir%\Include\Logging.ahk
 #Include %A_ScriptDir%\Include\ADB.ahk
 #Include %A_ScriptDir%\Include\Gdip_All.ahk
@@ -236,7 +238,9 @@ Sleep, 1000
 
 ConnectAdb(folderPath)
 
-resetWindows()
+if (!DEV_MODE) {
+    resetWindows()
+}
 MaxRetries := 10
 RetryCount := 0
 Loop {
@@ -328,7 +332,7 @@ if(injectMethod && DeadCheck != 1) {
 
 clearMissionCache()
 
-if(!injectMethod || !loadedAccount)
+if((!injectMethod || !loadedAccount) && !DEV_MODE)
     restartGameInstance("Initializing bot...", false)
 
 pToken := Gdip_Startup()
@@ -336,7 +340,6 @@ packsInPool := 0
 packsThisRun := 0
 
 ; Inject dev code
-DEV_MODE = True
 if (DEV_MODE) {
     dev()
     return
@@ -6722,25 +6725,22 @@ MapCollection(n_cards) {
     return
 }
 
-
 dev() {
-    fullScreenshotFile := tempDir . "\card_edition.png"
-    adbTakeScreenshot(fullScreenshotFile)
-    ParseImage(fullScreenshotFile, 374-94, 767, 50, 18, "", "", card_id)
+    ; fullScreenshotFile := tempDir . "\card_edition.png"
+    ; adbTakeScreenshot(fullScreenshotFile)
+    ; ParseImage(fullScreenshotFile, 374-94, 767, 50, 18, "", "", card_id)
 
-    Loop {
-        if (FindOrLoseImage((280+10)/2, (767)/2+50, (280+50)/2, (767+18)/2+50, , "##edition_b1", 0, failSafeTime)) {
-            MsgBox, FOUND
-            break
-        }
-        ; adbClick_wbb(89, 517)
+    ; Loop {
+    ;     if (FindOrLoseImage((280+10)/2, (767)/2+50, (280+50)/2, (767+18)/2+50, , "##edition_b1", 0, failSafeTime)) {
+    ;         MsgBox, FOUND
+    ;         break
+    ;     }
+    ;     Delay(1)
+    ;     failSafeTime := (A_TickCount - failSafe) // 1000
+    ;     CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
+    ; }
 
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
-    }
-
-    return
+    ; return
 
     MapCollectionRoutine()
     return
@@ -6810,7 +6810,7 @@ MapCollectionRoutine() {
     failSafe := A_TickCount
     failSafeTime := 0
     Loop {
-        if (FindOrLoseImage(23, 182, 38, 199, , "#n_cards_search", 0, failSafeTime)) {
+        if (FindOrLoseImage(23, 182, 38, 199, , "##n_cards_search", 0, failSafeTime)) {
             break
         }
         Delay(1)
