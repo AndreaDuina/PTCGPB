@@ -6944,16 +6944,11 @@ isMuMuv5(){
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; DEV MODE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Crops an image, scales it up, converts it to grayscale, and enhances contrast to improve OCR accuracy.
 CropAndFormatForOcrDev(inputFile, x := 0, y := 0, width := 200, height := 200, scaleUpPercent := 200) {
-    ; Get bitmap from file
     pBitmapOrignal := Gdip_CreateBitmapFromFile(inputFile)
-    ; Crop to region, Scale up the image, Convert to greyscale, Increase contrast
     pBitmapFormatted := Gdip_CropResizeGreyscaleContrast(pBitmapOrignal, x, y, width, height, scaleUpPercent, 75)
-
     filePath := A_ScriptDir . "\temp\" .  winTitle . "crop.png"
     Gdip_SaveBitmapToFile(pBitmapFormatted, filePath)
-    ; Cleanup references
     Gdip_DisposeImage(pBitmapOrignal)
     return pBitmapFormatted
 }
@@ -6972,7 +6967,6 @@ ParseImageDev(screenshotFile, x, y, w, h, allowedChars, validPattern, ByRef outp
     blowUp := [100]
     Loop, % blowUp.Length() {
         pBitmapFormatted := CropAndFormatForOcrDev(screenshotFile, x, y, w, h, blowUp[A_Index])
-
         output := GetTextFromImageDev(pBitmapFormatted, allowedChars)
         MsgBox, % "output " . output
     }
