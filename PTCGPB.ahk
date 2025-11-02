@@ -105,7 +105,7 @@ OnError("ErrorHandler")
 
 githubUser := "kevnITG"
    ,repoName := "PTCGPB"
-   ,localVersion := "v8.1.4"
+   ,localVersion := "v8.2.2"
    ,scriptFolder := A_ScriptDir
    ,zipPath := A_Temp . "\update.zip"
    ,extractPath := A_Temp . "\update"
@@ -277,17 +277,20 @@ NextStep:
 
    sectionColor := "cFF4500"
    Gui, Font, s10 cWhite, Segoe UI
-   Gui, Add, GroupBox, x255 y65 w180 h50 %sectionColor%, % currentDictionary.CardDetection
+   Gui, Add, GroupBox, x255 y55 w180 h50 %sectionColor%, % currentDictionary.CardDetection
    
-   Gui, Add, Button, x275 y85 w140 h25 gShowCardDetection vCardDetectionButton BackgroundTrans, Loading...
+   Gui, Add, Button, x275 y75 w140 h25 gShowCardDetection vCardDetectionButton BackgroundTrans, Loading...
    
    UpdateCardDetectionButtonText()
 
    sectionColor := "c4169E1"
    Gui, Font, s10 cWhite, Segoe UI
-   Gui, Add, GroupBox, x255 y130 w180 h50 %sectionColor%, % currentDictionary.SaveForTrade
+   Gui, Add, GroupBox, x255 y110 w180 h70 %sectionColor%, % currentDictionary.SaveForTrade
    
-   Gui, Add, Button, x275 y150 w140 h25 gShowS4TSettings vS4TButton BackgroundTrans, Loading...
+   Gui, Add, Button, x275 y130 w140 h25 gShowS4TSettings vS4TButton BackgroundTrans, Loading...
+   
+   Gui, Font, s6 cWhite, Segoe UI
+   Gui, Add, Button, x295 y160 w100 h15 gOpenTradesDashboard BackgroundTrans, Open Trades Dashboard
    
    UpdateS4TButtonText()
 
@@ -359,7 +362,7 @@ NextStep:
    Gui, Font, s12 cWhite Bold
    Gui, Add, Text, x621 y20 w155 h50 Left BackgroundTrans cWhite, % currentDictionary.title_main
    Gui, Font, s10 cWhite Bold
-   Gui, Add, Text, x621 y20 w155 h50 Left BackgroundTrans cWhite, % "`nv8.1.4 kevinnnn)"
+   Gui, Add, Text, x621 y20 w155 h50 Left BackgroundTrans cWhite, % "`nv8.2.2 kevinnnn"
 
    Gui, Add, Picture, gBuyMeCoffee x625 y60, %A_ScriptDir%\GUI\Images\support_me_on_kofi.png
 
@@ -555,8 +558,8 @@ ShowPackSelection:
     yPos += 25
     Gui, PackSelect:Add, Checkbox, % (MegaAltaria ? "Checked" : "") " vMegaAltaria_Popup x10 y" . yPos . " cWhite", % currentDictionary.Txt_MegaAltaria
     yPos += 25
-    Gui, PackSelect:Add, Checkbox, % (Deluxe ? "Checked" : "") " vDeluxe_Popup x10 y" . yPos . " cWhite", % currentDictionary.Txt_Deluxe
-    yPos += 25    
+    ; Gui, PackSelect:Add, Checkbox, % (Deluxe ? "Checked" : "") " vDeluxe_Popup x10 y" . yPos . " cWhite", % currentDictionary.Txt_Deluxe
+    ; yPos += 25    
     Gui, PackSelect:Add, Checkbox, % (Springs ? "Checked" : "") " vSprings_Popup x10 y" . yPos . " cWhite", % currentDictionary.Txt_Springs
     yPos += 25
     Gui, PackSelect:Add, Checkbox, % (HoOh ? "Checked" : "") " vHoOh_Popup x10 y" . yPos . " cWhite", % currentDictionary.Txt_HoOh
@@ -1020,7 +1023,7 @@ ShowS4TSettings:
     buttonCenterX := 375
     popupWidth := 200
     popupX := mainWinX + buttonCenterX - (popupWidth / 2)
-    popupY := mainWinY + 50
+    popupY := mainWinY + 0
     
     Gui, S4TSettingsSelect:Destroy
     Gui, S4TSettingsSelect:New, +ToolWindow -MaximizeBox -MinimizeBox +LastFound, Save for Trade Settings
@@ -1085,6 +1088,9 @@ ShowS4TSettings:
     
     Gui, S4TSettingsSelect:Add, Checkbox, % (s4tSendAccountXml ? "Checked" : "") " vs4tSendAccountXml_Popup x15 y" . yPos . " " . sectionColor, % currentDictionary.Txt_s4tSendAccountXml
     yPos += 20
+    
+    Gui, S4TSettingsSelect:Add, Checkbox, % (ocrShinedust ? "Checked" : "") " vocrShinedust_Popup x15 y" . yPos . " " . sectionColor, Track Shinedust
+    yPos += 25
     ; Gui, S4TSettingsSelect:Add, Checkbox, % (s4tSilent ? "Checked" : "") " vs4tSilent_Popup x15 y" . yPos . " " . sectionColor, Silent (No Ping)
     ; yPos += 35
     
@@ -1114,6 +1120,7 @@ ApplyS4TSettings:
     s4tDiscordUserId := s4tDiscordUserId_Popup
     s4tDiscordWebhookURL := s4tDiscordWebhookURL_Popup
     s4tSendAccountXml := s4tSendAccountXml_Popup
+    ocrShinedust := ocrShinedust_Popup
     s4tSilent := 0
     ; s4tSilent := s4tSilent_Popup
     
@@ -1141,6 +1148,7 @@ ApplyS4TSettings:
     GuiControl,, s4tWPMinCards, %s4tWPMinCards%
     GuiControl,, s4tDiscordUserId, %s4tDiscordUserId%
     GuiControl,, s4tDiscordWebhookURL, %s4tDiscordWebhookURL%
+    GuiControl,, ocrShinedust, %ocrShinedust%
     GuiControl,, s4tSendAccountXml, %s4tSendAccountXml%
     ; GuiControl,, s4tSilent, %s4tSilent%
     
@@ -1406,6 +1414,8 @@ Save:
    s4tWP := false
    s4tWPMinCards := 1
   }
+
+  Deluxe := 0 ; Turn off Deluxe for all users now that pack is removed
   
   SaveAllSettings()
   
@@ -1526,6 +1536,20 @@ Save:
       s4tSettings .= "• 3 Diamond`n"
     if (s4t4Dmnd)
       s4tSettings .= "• 4 Diamond`n"
+    if (s4tShiny1Star)
+      s4tSettings .= "• 1 Star Shiny`n"
+   if (s4tShiny2Star)
+      s4tSettings .= "• 2 Star Shiny`n"
+   if (s4tTrainer)
+      s4tSettings .= "• 2 Star Trainer`n"
+   if (s4tRainbow)
+      s4tSettings .= "• 2 Star Rainbow`n"
+   if (s4tFullArt)
+      s4tSettings .= "• 2 Star Full Art`n"
+   if (s4tImmersive)
+      s4tSettings .= "• Immersive`n"
+   if (s4tCrown)
+      s4tSettings .= "• Crown Rare`n"
     if (s4tWP)
       s4tSettings .= "• " . SetUpDictionary.Confirm_WonderPick . " (" . s4tWPMinCards . " " . SetUpDictionary.Confirm_MinCards . ")`n"
     ; if (s4tSilent)
@@ -1535,6 +1559,9 @@ Save:
   
   if (s4tSendAccountXml && s4tEnabled) {
     confirmMsg .= "`n" . SetUpDictionary.Confirm_XMLWarning . "`n"
+   }
+  if (ocrShinedust && s4tEnabled) {
+    confirmMsg .= "• Track Shinedust`n"
    }
   if (sendAccountXml) {
     confirmMsg .= "`n" . SetUpDictionary.Confirm_XMLWarning . "`n"
@@ -1664,6 +1691,11 @@ return
 
 OpenDiscord:
    Run, https://discord.gg/C9Nyf7P4sT
+return
+
+OpenTradesDashboard:
+   TradesFile := A_ScriptDir . "\Accounts\Trades\Trades_Dashboard.html"
+   Run, %TradesFile%
 return
 
 RunXMLSortTool:
@@ -1937,6 +1969,7 @@ LoadSettingsFromIni() {
       IniRead, s4tDiscordWebhookURL, Settings.ini, UserSettings, s4tDiscordWebhookURL, ""
       IniRead, s4tDiscordUserId, Settings.ini, UserSettings, s4tDiscordUserId, ""
       IniRead, s4tSendAccountXml, Settings.ini, UserSettings, s4tSendAccountXml, 0
+      IniRead, ocrShinedust, Settings.ini, UserSettings, ocrShinedust, 0
       
       IniRead, DiscordWebhookURL, Settings.ini, UserSettings, DiscordWebhookURL, ""
       IniRead, DiscordUserId, Settings.ini, UserSettings, DiscordUserId, ""
@@ -2085,7 +2118,7 @@ SaveAllSettings() {
    global CurrentVisibleSection, heartBeatDelay, sendAccountXml, showcaseEnabled, isDarkTheme
    global useBackgroundImage, tesseractPath, debugMode, useTesseract, statusMessage
    global s4tEnabled, s4tSilent, s4t3Dmnd, s4t4Dmnd, s4t1Star, s4tGholdengo, s4tWP, s4tWPMinCards
-   global s4tDiscordUserId, s4tDiscordWebhookURL, s4tSendAccountXml, minStarsShiny, instanceLaunchDelay, applyRoleFilters, mainIdsURL, vipIdsURL
+   global s4tDiscordUserId, s4tDiscordWebhookURL, s4tSendAccountXml, ocrShinedust, minStarsShiny, instanceLaunchDelay, applyRoleFilters, mainIdsURL, vipIdsURL
    global s4tCrown, s4tImmersive, s4tShiny1Star, s4tShiny2Star, s4tTrainer, s4tRainbow, s4tFullArt
    global spendHourGlass, openExtraPack, injectSortMethod, rowGap, SortByDropdown
    global waitForEligibleAccounts, maxWaitHours, skipMissionsInjectMissions
@@ -2179,6 +2212,7 @@ SaveAllSettings() {
    iniContent .= "s4tShiny2Star=" s4tShiny2Star "`n"
    iniContent .= "s4tWP=" s4tWP "`n"
    iniContent .= "s4tSendAccountXml=" s4tSendAccountXml "`n"
+   iniContent .= "ocrShinedust=" ocrShinedust "`n"
    iniContent .= "sendAccountXml=" sendAccountXml "`n"
    iniContent .= "heartBeat=" heartBeat "`n"
    iniContent .= "menuExpanded=" menuExpanded "`n"
