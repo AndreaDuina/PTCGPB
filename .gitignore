@@ -14,3 +14,4 @@ Scripts/*.ini
 *.ini
 *.bak
 !.gitkeep
+Scripts/temp/*
