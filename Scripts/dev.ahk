@@ -6943,10 +6943,9 @@ isMuMuv5(){
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; DEV MODE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-tempDir := A_ScriptDir . "\temp"
 
 ; Crops an image, scales it up, converts it to grayscale, and enhances contrast to improve OCR accuracy.
-CropAndFormatForOcrMERDA(inputFile, x := 0, y := 0, width := 200, height := 200, scaleUpPercent := 200) {
+CropAndFormatForOcrDev(inputFile, x := 0, y := 0, width := 200, height := 200, scaleUpPercent := 200) {
     ; Get bitmap from file
     pBitmapOrignal := Gdip_CreateBitmapFromFile(inputFile)
     ; Crop to region, Scale up the image, Convert to greyscale, Increase contrast
@@ -6959,7 +6958,7 @@ CropAndFormatForOcrMERDA(inputFile, x := 0, y := 0, width := 200, height := 200,
     return pBitmapFormatted
 }
 
-GetTextFromImage(pBitmap, charAllowList := "") {
+GetTextFromImageDev(pBitmap, charAllowList := "") {
     ocrLanguage := "en"
     hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap)
     pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
@@ -6968,13 +6967,13 @@ GetTextFromImage(pBitmap, charAllowList := "") {
     return ocrText
 }
 
-ParseImage(screenshotFile, x, y, w, h, allowedChars, validPattern, ByRef output) {
+ParseImageDev(screenshotFile, x, y, w, h, allowedChars, validPattern, ByRef output) {
     success := True
     blowUp := [100]
     Loop, % blowUp.Length() {
-        pBitmapFormatted := CropAndFormatForOcrMERDA(screenshotFile, x, y, w, h, blowUp[A_Index])
+        pBitmapFormatted := CropAndFormatForOcrDev(screenshotFile, x, y, w, h, blowUp[A_Index])
 
-        output := GetTextFromImage(pBitmapFormatted, allowedChars)
+        output := GetTextFromImageDev(pBitmapFormatted, allowedChars)
         MsgBox, % "output " . output
     }
     return success
@@ -7034,7 +7033,7 @@ FilterByRarity(rarities) {
 }
 
 CardIdOCR(fullScreenshotFile, y, ByRef card_id) {
-    ; return ParseImage(fullScreenshotFile, 374, 600, 76, 20, "0123456789/", "^\d{3}\/\d{3}$", card_id)
+    ; return ParseImageDev(fullScreenshotFile, 374, 600, 76, 20, "0123456789/", "^\d{3}\/\d{3}$", card_id)
     return RefinedOCRText(fullScreenshotFile, 374, y, 76, 20, "0123456789/", "^\d{3}\/\d{3}$", card_id)
 }
 
@@ -7127,10 +7126,80 @@ MapCollection(n_cards) {
     return
 }
 
-TestRoutine() {
+FindOrLoseCollectionIcon() {
+    failSafe := A_TickCount
+    failSafeTime := 0
+    Delay(1)
+    Loop {
+        if (FindOrLoseImage(80, 509, 98, 526, , "##collection_on", 0, failSafeTime)) {
+            break
+        }
+        adbClick_wbb(89, 517)
+        Delay(1)
+        failSafeTime := (A_TickCount - failSafe) // 1000
+        CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
+    }
+    Delay(1)
+}
+
+FindOrLoseSearchInCollection() {
+    ; Wait for search icon to appear and click on it
+    failSafe := A_TickCount
+    failSafeTime := 0
+    Delay(1)
+    Loop {
+        if (FindOrLoseImage(231, 177, 258, 200, , "##search", 0, failSafeTime)) {
+            break
+        }
+        Delay(1)
+        failSafeTime := (A_TickCount - failSafe) // 1000
+        CreateStatusMessage("Waiting for search icon`n(" . failSafeTime . "/45 seconds)")
+    }
+    Delay(1)
+}
+
+FindOrLoseShineDustIcon() {
+    failSafe := A_TickCount
+    failSafeTime := 0
+    Delay(1)
+    Loop {
+        if (FindOrLoseImage(189, 66, 202, 80, , "##dust", 0, failSafeTime)) {
+            break
+        } else if (Mod(failSafeTime, 5) = 0 && failSafeTime != 0) {
+            FindOrHandleTutorialSearchInCollection()
+            Delay(1)
+        }
+        Delay(1)
+        failSafeTime := (A_TickCount - failSafe) // 1000
+        CreateStatusMessage("Waiting for dust icon`n(" . failSafeTime . "/45 seconds)")
+    }
+    Delay(1)
+}
+
+FindOrHandleTutorialSearchInCollection() {
+    ; Wait for search icon to appear and click on it
+    failSafe := A_TickCount
+    failSafeTime := 0
+    Delay(1)
+    Loop {
+        if (FindOrLoseImage(231, 177, 258, 200, , "##search", 0, failSafeTime)) {
+            break
+        } else {
+            adbClick_wbb(190, 427) ; Handles tutorial if needed
+            Delay(1)
+            adbClick_wbb(190, 480) ; Handles tutorial if needed
+        }
+        Delay(1)
+        failSafeTime := (A_TickCount - failSafe) // 1000
+        CreateStatusMessage("Waiting for search icon`n(" . failSafeTime . "/45 seconds)")
+    }
+    Delay(1)
+}
+
+IdkRoutine() {
     fullScreenshotFile := A_ScriptDir . "\temp\card_edition.png"
     adbTakeScreenshot(fullScreenshotFile)
-    ParseImage(fullScreenshotFile, 374-94, 767, 50, 18, "", "", card_id)
+    ParseImageDev(fullScreenshotFile, 374-94, 767, 50, 18, "", "", card_id)
 
     Loop {
         if (FindOrLoseImage((280+10)/2, (767)/2+50, (280+50)/2, (767+18)/2+50, , "##edition_b1", 0, failSafeTime)) {
@@ -7148,38 +7217,13 @@ TestRoutine() {
 MapCollectionRoutine() {
     ; When collection off -> open collection
     ; FindImageAndClick(78, 504, 102, 527, , "##collection_off", 89, 516, sleepTime)
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(80, 509, 98, 526, , "##collection_on", 0, failSafeTime)) {
-            break
-        }
-        adbClick_wbb(89, 517)
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(1)
+    FindOrLoseCollectionIcon()
+    FindOrLoseSearchInCollection()
 
-    ; TODO: handle tutorial if it's the first time opening the tab
-
-    ; Wait for search icon to appear and click on it
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(231, 177, 258, 200, , "##search", 0, failSafeTime)) {
-            break
-        }
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Waiting for search icon`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(0.5)
     adbClick_wbb(248, 192)
 
     ; Detect shine dust icon
-    Delay(0.1)
-    FindImageAndClick(189, 66, 202, 80, , "##dust", 195, 75, sleepTime)
+    FindOrLoseShineDustIcon()
 
     ; Read shine dust amount (works iff > 0 ?)
     fullScreenshotFile := A_ScriptDir . "\temp\dust.png"
@@ -7252,58 +7296,22 @@ MapCollectionRoutine() {
 }
 
 MapShinedustRoutine() {
-    ; When collection off -> open collection
-    ; FindImageAndClick(78, 504, 102, 527, , "##collection_off", 89, 516, sleepTime)
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(80, 509, 98, 526, , "##collection_on", 0, failSafeTime)) {
-            break
-        }
-        adbClick_wbb(89, 517)
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(1)
 
-    ; TODO: handle tutorial if it's the first time opening the tab
+    FindOrLoseCollectionIcon()
+    FindOrLoseSearchInCollection()
 
-    ; Wait for search icon to appear and click on it
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(231, 177, 258, 200, , "##search", 0, failSafeTime)) {
-            break
-        }
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Waiting for search icon`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(0.5)
     adbClick_wbb(248, 192)
 
-    ; Detect shine dust icon
-    Delay(0.1)
-    FindImageAndClick(189, 66, 202, 80, , "##dust", 195, 75, sleepTime)
+    FindOrLoseShineDustIcon()
+
+    adbClick_wbb(248, 192)
 
     ; Read shine dust amount (works iff > 0 ?)
     fullScreenshotFile := A_ScriptDir . "\temp\" .  "dust.png"
     adbTakeScreenshot(fullScreenshotFile)
 
     RefinedOCRText(fullScreenshotFile, 395, 42, 82, 22, "0123456789,.+", "/^(?:\d{1,3}|\d{1,2}[\,,.]\d{3}\+?)$", n_dust)
-    ; MsgBox, % n_dust
-
-    ;;;;;;;;;
-
-    xmlPath := loadDir . "\" . A_LoopFileName
-    FileRead, xmlContent, %xmlPath%
-    MsgBox, % xmlPath . " - " . loadDir " - " . accountFileName
-    if (RegExMatch(xmlContent, "i)<string name=""deviceAccount"">([^<]+)</string>", match)) {
-        MsgBox, % xmlContent
-    }
-
-    ;;;;;;;;;
+    MsgBox, % n_dust
 
     ; Close filters
     adbClick_wbb(150, 507)
@@ -7322,401 +7330,20 @@ MapShinedustRoutine() {
         CreateStatusMessage("Back to home tab`n(" . failSafeTime . "/45 seconds)")
     }
     Delay(1)
-}
 
-dev() {
-    ; TestRoutine()
-    ; MapCollectionRoutine()
-    MapShinedustRoutine()
-    return
-}
-
-return
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; DEV MODE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-tempDir := A_ScriptDir . "\temp"
-
-; Crops an image, scales it up, converts it to grayscale, and enhances contrast to improve OCR accuracy.
-CropAndFormatForOcrMERDA(inputFile, x := 0, y := 0, width := 200, height := 200, scaleUpPercent := 200) {
-    ; Get bitmap from file
-    pBitmapOrignal := Gdip_CreateBitmapFromFile(inputFile)
-    ; Crop to region, Scale up the image, Convert to greyscale, Increase contrast
-    pBitmapFormatted := Gdip_CropResizeGreyscaleContrast(pBitmapOrignal, x, y, width, height, scaleUpPercent, 75)
-
-    filePath := A_ScriptDir . "\temp\" .  winTitle . "crop.png"
-    Gdip_SaveBitmapToFile(pBitmapFormatted, filePath)
-    ; Cleanup references
-    Gdip_DisposeImage(pBitmapOrignal)
-    return pBitmapFormatted
-}
-
-GetTextFromImage(pBitmap, charAllowList := "") {
-    ocrLanguage := "en"
-    hBitmap := Gdip_CreateHBITMAPFromBitmap(pBitmap)
-    pIRandomAccessStream := HBitmapToRandomAccessStream(hBitmap)
-    ocrText := ocr(pIRandomAccessStream, ocrLanguage)
-    DeleteObject(hBitmapFriendCode)
-    return ocrText
-}
-
-ParseImage(screenshotFile, x, y, w, h, allowedChars, validPattern, ByRef output) {
-    success := True
-    blowUp := [100]
-    Loop, % blowUp.Length() {
-        pBitmapFormatted := CropAndFormatForOcrMERDA(screenshotFile, x, y, w, h, blowUp[A_Index])
-
-        output := GetTextFromImage(pBitmapFormatted, allowedChars)
-        MsgBox, % "output " . output
-    }
-    return success
-}
-
-FilterByRarity(rarities) {
-    rarity_x = 50
-    rarity_y = 435
-    rarity_dx = 60
-    rarity_dy = 30
-
-    ; Look for 2s or 3s rarities
-    ; Loop backwards to safely remove items while iterating
-    found_2s_or_3s := false
-    Loop % rarities.MaxIndex() {
-        i := rarities.MaxIndex() - A_Index + 1
-        val := rarities[i]
-        if (val = "2s" || val = "3s") {
-            rarities.Remove(i)
-            found_2s_or_3s := true
-        }
-    }
-    ; Handle 2s or 3s as a special case
-    if (found_2s_or_3s) {
-        ; Click all rairities
-        adbClick_wbb(222, 396)
-        Delay(1)
-        ; Disable everything that is not 2s or 3s
-        anti_rarities := Array("1d", "2d", "3d", "4d", "1s", "1sh", "2sh", "1c", "p")
-        FilterByRarity(anti_rarities)
-    }
-
-    for idx, rarity in rarities {
-        if (rarity == "1d") {
-            adbClick_wbb(rarity_x, rarity_y)
-        } else if (rarity == "2d") {
-            adbClick_wbb(rarity_x + rarity_dx, rarity_y)
-        } else if (rarity == "2d") {
-            adbClick_wbb(rarity_x + rarity_dx, rarity_y)
-        } else if (rarity == "3d") {
-            adbClick_wbb(rarity_x + 2 * rarity_dx, rarity_y)
-        } else if (rarity == "4d") {
-            adbClick_wbb(rarity_x + 3 * rarity_dx, rarity_y)
-        } else if (rarity == "1s") {
-            adbClick_wbb(rarity_x, rarity_y + rarity_dy)
-        } else if (rarity == "1sh") {
-            adbClick_wbb(rarity_x + 3 * rarity_dx, rarity_y + rarity_dy)
-        } else if (rarity == "2sh") {
-            adbClick_wbb(rarity_x, rarity_y + 2 * rarity_dy)
-        } else if (rarity == "1c") {
-            adbClick_wbb(rarity_x + rarity_dx, rarity_y + 2 * rarity_dy)
-        } else if (rarity == "p") {
-            adbClick_wbb(163, 499)
-        }
-        Delay(1)
-    }
-}
-
-CardIdOCR(fullScreenshotFile, y, ByRef card_id) {
-    ; return ParseImage(fullScreenshotFile, 374, 600, 76, 20, "0123456789/", "^\d{3}\/\d{3}$", card_id)
-    return RefinedOCRText(fullScreenshotFile, 374, y, 76, 20, "0123456789/", "^\d{3}\/\d{3}$", card_id)
-}
-
-ReadCardId(ByRef card_id) {
-    fullScreenshotFile := A_ScriptDir . "\temp\card_info.png"
-    adbTakeScreenshot(fullScreenshotFile)
-
-    card_id := ""
-    Loop, 1 {
-        ; Regular cards
-        if (CardIdOCR(fullScreenshotFile, 767, card_id) And card_id != "") {
-            return true
-            ; Cards with no dex info (e.g. full art, trainer)
-        } else if (CardIdOCR(fullScreenshotFile, 737, card_id) And card_id != "") {
-            return true
-            ; Cards with no description (e.g. EX)
-        } else if (CardIdOCR(fullScreenshotFile, 600, card_id) And card_id != "") {
-            return true
-        }
-
-        Delay(1)
-        CreateStatusMessage("Reading card ID`n(" . A_Index . "/1 times)")
-    }
-    return false
-}
-
-MapCollection(n_cards) {
-    card_ids := []
-
-    ReadCardId(card_id_0)
-    card_ids.insert(card_id_0)
-
-    if (n_cards == 1) {
-        for index, value in card_ids {
-            MsgBox, % "Item " index ": " value
-        }
-        return
-    }
-
-    last_id := card_id_0
-    Loop, % n_cards-1 {
-        ; Swipe to next card and wait for the favorite symbol to appear again
-        adbSwipe_wbb("500 500 50 500 60")
-        failSafe := A_TickCount
-        failSafeTime := 0
-        Loop {
-            if (FindOrLoseImage(214, 63, 237, 86, , "##favorite", 0, failSafeTime)) {
-                break
-            }
-            adbClick_wbb(57, 272)
-            Delay(1)
-            failSafeTime := (A_TickCount - failSafe) // 1000
-            CreateStatusMessage("Waiting card to open`n(" . failSafeTime . "/45 seconds)")
-        }
-
-        ; Read card ID or swipe again if necessary
-        Loop, 3 {
-            card_id_i := ""
-            if (ReadCardId(card_id_i)) {
-                ; TODO: check if it's the same card by checking with an
-                ; in-memory needle of the previous recognized card
-                ; If equal to the previous one => it didn't swipe
-                if (card_id_i == last_id) {
-                    adbSwipe_wbb("500 500 50 500 60")
-                    Delay(5)
-                } else {
-                    ; TODO: check edition
-                    card_ids.Push(card_id_i)
-                    last_id := card_id_i
-                    break
-                }
-            }
-            Delay(1)
-            CreateStatusMessage("Read card ID or swipe`n(" . A_Index . "/3 times)")
-        }
-
-        ; Looped back to the first card
-        if (card_id_i == card_id_0) {
-            card_ids.Pop()
-            break
-        }
-    }
-
-    msg := ""
-    for index, value in card_ids {
-        msg .= value " - "
-    }
-    MsgBox, % msg
-
-    return
-}
-
-TestRoutine() {
-    fullScreenshotFile := A_ScriptDir . "\temp\card_edition.png"
-    adbTakeScreenshot(fullScreenshotFile)
-    ParseImage(fullScreenshotFile, 374-94, 767, 50, 18, "", "", card_id)
-
-    Loop {
-        if (FindOrLoseImage((280+10)/2, (767)/2+50, (280+50)/2, (767+18)/2+50, , "##edition_b1", 0, failSafeTime)) {
-            MsgBox, FOUND
-            break
-        }
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
-    }
-
-    return
-}
-
-MapCollectionRoutine() {
-    ; When collection off -> open collection
-    ; FindImageAndClick(78, 504, 102, 527, , "##collection_off", 89, 516, sleepTime)
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(80, 509, 98, 526, , "##collection_on", 0, failSafeTime)) {
-            break
-        }
-        adbClick_wbb(89, 517)
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(1)
-
-    ; TODO: handle tutorial if it's the first time opening the tab
-
-    ; Wait for search icon to appear and click on it
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(231, 177, 258, 200, , "##search", 0, failSafeTime)) {
-            break
-        }
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Waiting for search icon`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(0.5)
-    adbClick_wbb(248, 192)
-
-    ; Detect shine dust icon
-    Delay(0.1)
-    FindImageAndClick(189, 66, 202, 80, , "##dust", 195, 75, sleepTime)
-
-    ; Read shine dust amount (works iff > 0 ?)
-    fullScreenshotFile := A_ScriptDir . "\temp\dust.png"
-    adbTakeScreenshot(fullScreenshotFile)
-    RefinedOCRText(fullScreenshotFile, 395, 42, 82, 22, "0123456789,.+", "/^(?:\d{1,3}|\d{1,2}[\,,.]\d{3}\+?)$", n_dust)
-    ; MsgBox, % n_dust
-
-    ; Clear filters
-    adbClick_wbb(221, 507)
-    Delay(1)
-
-    ; Filter
-    FilterByRarity(Array("1s"))
-
-    ; Click OK
-    FindImageAndClick(189, 66, 202, 80, , "##dust", 141, 464, sleepTime)
-    Delay(1)
-
-    ; TODO: handle no cards found case
-
-    ; Check how many cards were found
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(23, 182, 38, 199, , "##n_cards_search", 0, failSafeTime)) {
-            break
-        }
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Waiting for search icon`n(" . failSafeTime . "/45 seconds)")
-    }
-    fullScreenshotFile := A_ScriptDir . "\temp\n_found.png"
-    adbTakeScreenshot(fullScreenshotFile)
-    RefinedOCRText(fullScreenshotFile, 78, 273, 80, 19, "0123456789,.+", "/^(?:\d{1,3}|\d{1,2}[\,,.]\d{3}\+?)$", n_found)
-
-    ; Click on the first card
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(214, 63, 237, 86, , "##favorite", 0, failSafeTime)) {
-            break
-        }
-        adbClick_wbb(57, 272)
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Waiting card to open`n(" . failSafeTime . "/45 seconds)")
-    }
-
-    ; Swipe up to reveal card info
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(225, 198, 274, 207, , "##card_info_up", 0, failSafeTime)) {
-            break
-        }
-        ; Swipe up
-        adbSwipe_wbb("470 950 470 650 60")
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Trying to swipe up`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(0.05)
-
-    ; Single digit numbers are hard to read with OCR. If couldn't read, assume it's 9
-    if (n_found == "") {
-        n_found := 9
-    }
-    MapCollection(n_found)
-
-}
-
-MapShinedustRoutine() {
-    ; When collection off -> open collection
-    ; FindImageAndClick(78, 504, 102, 527, , "##collection_off", 89, 516, sleepTime)
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(80, 509, 98, 526, , "##collection_on", 0, failSafeTime)) {
-            break
-        }
-        adbClick_wbb(89, 517)
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Opening collection tab`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(1)
-
-    ; TODO: handle tutorial if it's the first time opening the tab
-
-    ; Wait for search icon to appear and click on it
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(231, 177, 258, 200, , "##search", 0, failSafeTime)) {
-            break
-        }
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Waiting for search icon`n(" . failSafeTime . "/45 seconds)")
-    }
-    Delay(0.5)
-    adbClick_wbb(248, 192)
-
-    ; Detect shine dust icon
-    Delay(0.1)
-    FindImageAndClick(189, 66, 202, 80, , "##dust", 195, 75, sleepTime)
-
-    ; Read shine dust amount (works iff > 0 ?)
-    fullScreenshotFile := A_ScriptDir . "\temp\" .  "dust.png"
-    adbTakeScreenshot(fullScreenshotFile)
-
-    RefinedOCRText(fullScreenshotFile, 395, 42, 82, 22, "0123456789,.+", "/^(?:\d{1,3}|\d{1,2}[\,,.]\d{3}\+?)$", n_dust)
-    ; MsgBox, % n_dust
-
-    ;;;;;;;;;
-
-    xmlPath := loadDir . "\" . A_LoopFileName
-    FileRead, xmlContent, %xmlPath%
-    MsgBox, % xmlPath . " - " . loadDir " - " . accountFileName
-    if (RegExMatch(xmlContent, "i)<string name=""deviceAccount"">([^<]+)</string>", match)) {
-        MsgBox, % xmlContent
-    }
-
-    ;;;;;;;;;
-
-    ; Close filters
-    adbClick_wbb(150, 507)
-    Delay(1)
-
-    ; Reset back to home
-    failSafe := A_TickCount
-    failSafeTime := 0
-    Loop {
-        if (FindOrLoseImage(20, 500, 55, 530, , "Home", 0, failSafeTime)) {
-            break
-        }
-        adbClick_wbb(20, 500)
-        Delay(1)
-        failSafeTime := (A_TickCount - failSafe) // 1000
-        CreateStatusMessage("Back to home tab`n(" . failSafeTime . "/45 seconds)")
+    if (n_dust != "") {
+        LogShinedustToDatabase(n_dust)
+        CreateStatusMessage("Account has " . n_dust . " shinedust.")
+        Sleep, 1000
+    } else {
+        CreateStatusMessage("Failed to OCR shinedust.")
+        Sleep, 1000
     }
     Delay(1)
 }
 
 dev() {
-    ; TestRoutine()
+    ; IdkRoutine()
     ; MapCollectionRoutine()
     MapShinedustRoutine()
     return
